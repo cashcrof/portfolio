@@ -9,7 +9,8 @@ const { createFilePath } = require(`gatsby-source-filesystem`)
 
 // Define the template for blog post
 const blogPost = path.resolve(`./src/templates/blog-post.js`)
-
+const portfolioItem = path.resolve(`./src/templates/portfolio-item.js`)
+const tagTemplate = path.resolve(`./src/templates/tag.js`)
 /**
  * @type {import('gatsby').GatsbyNode['createPages']}
  */
@@ -17,11 +18,21 @@ exports.createPages = async ({ graphql, actions, reporter }) => {
   const { createPage } = actions
 
   // Get all markdown blog posts sorted by date
-  const result = await graphql(`
+  const blogResult = await graphql(`
     {
-      allMarkdownRemark(sort: { frontmatter: { date: ASC } }, limit: 1000) {
+      allMarkdownRemark(
+        filter: { fileAbsolutePath: { regex: "^/content/blog/" } }
+        sort: { frontmatter: { date: DESC } }
+        limit: 1000
+      ) {
         nodes {
           id
+          frontmatter {
+            title
+            description
+            date
+            tags
+          }
           fields {
             slug
           }
@@ -30,32 +41,114 @@ exports.createPages = async ({ graphql, actions, reporter }) => {
     }
   `)
 
-  if (result.errors) {
+  const portfolioResult = await graphql(`
+    {
+      allMarkdownRemark(
+        filter: { fileAbsolutePath: { regex: "^/content/portfolio/" } }
+        sort: { frontmatter: { date: DESC } }
+        limit: 1000
+      ) {
+        nodes {
+          id
+          frontmatter {
+            title
+            description
+            date
+            tags
+          }
+          fields {
+            slug
+          }
+        }
+      }
+    }
+  `)
+
+  if (blogResult.errors) {
     reporter.panicOnBuild(
       `There was an error loading your blog posts`,
-      result.errors
+      blogResult.errors
     )
     return
   }
 
-  const posts = result.data.allMarkdownRemark.nodes
+  if (portfolioResult.errors) {
+    reporter.panicOnBuild(
+      `There was an error loading your portfolio posts`,
+      portfolioResult.errors
+    )
+    return
+  }
+
+  const blogPosts = blogResult.data.allMarkdownRemark.nodes
+  const portfolioPosts = portfolioResult.data.allMarkdownRemark.nodes
+  const blogTags = new Set()
+  const portfolioTags = new Set()
 
   // Create blog posts pages
   // But only if there's at least one markdown file found at "content/blog" (defined in gatsby-config.js)
   // `context` is available in the template as a prop and as a variable in GraphQL
 
-  if (posts.length > 0) {
-    posts.forEach((post, index) => {
-      const previousPostId = index === 0 ? null : posts[index - 1].id
-      const nextPostId = index === posts.length - 1 ? null : posts[index + 1].id
+  if (blogPosts.length > 0) {
+    blogPosts.forEach((post, index) => {
+      const previousPostId = index === 0 ? null : blogPosts[index - 1].id
+      const nextPostId =
+        index === blogPosts.length - 1 ? null : blogPosts[index + 1].id
+
+      post.frontmatter.tags?.forEach(tag => {
+        blogTags.add(tag)
+      })
 
       createPage({
-        path: post.fields.slug,
+        path: "blog" + post.fields.slug,
         component: blogPost,
         context: {
           id: post.id,
           previousPostId,
           nextPostId,
+        },
+      })
+    })
+
+    Array.from(blogTags).forEach(tag => {
+      createPage({
+        path: `/blog/tags/${tag}/`,
+        component: tagTemplate,
+        context: {
+          tag,
+        },
+      })
+    })
+  }
+
+  if (portfolioPosts.length > 0) {
+    portfolioPosts.forEach((post, index) => {
+      const previousPostId = index === 0 ? null : portfolioPosts[index - 1].id
+      const nextPostId =
+        index === portfolioPosts.length - 1
+          ? null
+          : portfolioPosts[index + 1].id
+
+      post.frontmatter.tags?.forEach(tag => {
+        portfolioTags.add(tag)
+      })
+      createPage({
+        path: "portfolio" + post.fields.slug,
+        component: portfolioItem,
+        context: {
+          id: post.id,
+          previousPostId,
+          nextPostId,
+        },
+      })
+    })
+
+    Array.from(portfolioTags).forEach(tag => {
+      createPage({
+        path: `/portfolio/tags/${tag}/`,
+        component: tagTemplate,
+        context: {
+          tag,
         },
       })
     })

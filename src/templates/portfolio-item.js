@@ -1,10 +1,12 @@
 import * as React from "react"
 import { Link, graphql } from "gatsby"
-
 import Layout from "../components/elements/blog/layout"
 import Seo from "../components/elements/blog/seo"
+import { GatsbyImage, getImage } from "gatsby-plugin-image"
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
+import { faLink } from "@fortawesome/free-solid-svg-icons"
 
-const BlogPostTemplate = ({
+const PortfolioItemTemplate = ({
   data: { previous, next, site, markdownRemark: post },
   location,
 }) => {
@@ -12,19 +14,34 @@ const BlogPostTemplate = ({
     window.scrollTo(0, 0)
   }, [])
   const siteTitle = site.siteMetadata?.title || `Title`
+  let featuredImg = getImage(
+    post.frontmatter.featuredImage?.childImageSharp?.gatsbyImageData
+  )
   const tags = post.frontmatter?.tags || []
 
   return (
     <Layout location={location} title={siteTitle}>
       <article
-        className="blog-post"
+        className="portfolio-item"
         itemScope
         itemType="http://schema.org/Article"
       >
         <header>
-          <h1 className="m-0 font-bold text-3xl" itemProp="headline">
-            {post.frontmatter.title}
-          </h1>
+          <GatsbyImage
+            image={featuredImg}
+            imgStyle={{ borderRadius: 50 }}
+            style={{ padding: 10 }}
+          />
+          <div className="flex place-content-between align-bottom w-full mt-20 mb-5">
+            <h2 className="m-0 w-1/2 font-bold text-3xl" itemProp="headline">
+              {post.frontmatter.title}
+            </h2>
+            {post.frontmatter.url && (
+              <a className="place-self-center" href={post.frontmatter.url}>
+                <FontAwesomeIcon icon={faLink} />
+              </a>
+            )}
+          </div>
           <p>{post.frontmatter.date}</p>
           <div className="post-tag-list">
             {tags.map(tag => (
@@ -39,7 +56,6 @@ const BlogPostTemplate = ({
           itemProp="articleBody"
         />
         <hr />
-        <footer></footer>
       </article>
       <nav className="blog-post-nav">
         <ul
@@ -53,14 +69,14 @@ const BlogPostTemplate = ({
         >
           <li>
             {previous && (
-              <Link to={"/blog" + previous.fields.slug} rel="prev">
+              <Link to={"/portfolio" + previous.fields.slug} rel="prev">
                 ← {previous.frontmatter.title}
               </Link>
             )}
           </li>
           <li>
             {next && (
-              <Link to={"/blog" + next.fields.slug} rel="next">
+              <Link to={"/portfolio" + next.fields.slug} rel="next">
                 {next.frontmatter.title} →
               </Link>
             )}
@@ -80,7 +96,7 @@ export const Head = ({ data: { markdownRemark: post } }) => {
   )
 }
 
-export default BlogPostTemplate
+export default PortfolioItemTemplate
 
 export const pageQuery = graphql`
   query BlogPostBySlug(
@@ -99,9 +115,15 @@ export const pageQuery = graphql`
       html
       frontmatter {
         title
-        date(formatString: "MMMM DD, YYYY")
+        date(formatString: "MMMM YYYY")
         description
+        featuredImage {
+          childImageSharp {
+            gatsbyImageData(width: 800)
+          }
+        }
         tags
+        url
       }
     }
     previous: markdownRemark(id: { eq: $previousPostId }) {
