@@ -56,8 +56,15 @@ typings/
 
 # gatsby files
 .cache/
-public
-
+public/~partytown
+public/icons
+public/page-data
+public/static
+public/favicon-32x32.png
+public/favicon.ico
+public/favicon.svg
+public/manifest.webmanifest
+public/robots.txt
 # Mac files
 .DS_Store
 
